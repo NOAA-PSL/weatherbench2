@@ -461,6 +461,17 @@ def _evaluate_all_metrics(
     forecast = create_persistence_forecast(forecast, truth)
 
   if data_config.by_init:
+    # get intersection of valid dates, then subselect truth and forecast (latter via initial conditions)
+    valid_time = list(set(truth.time.values).intersection(set(forecast.valid_time.values.flatten())))
+    t0 = xr.where(
+        [t in valid_time for t in forecast.valid_time.isel(lead_time=0, drop=True)],
+        forecast.init_time,
+        np.datetime64("NaT"),
+    ).dropna("init_time")
+    forecast = forecast.sel(init_time=t0)
+    # note that it's very important to use forecast.valid_time and not valid_time computed above,
+    # because using the xarray dataset also converts
+    # the truth dataset coordinates from time -> (init_time, lead_time) as with forecast dataset
     truth = truth.sel(time=forecast.valid_time)
 
   results = _metric_and_region_loop(forecast, truth, eval_config)
