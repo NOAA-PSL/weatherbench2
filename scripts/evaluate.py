@@ -386,6 +386,8 @@ def main(argv: list[str]) -> None:
 
   # Open climatology for ACC and quantile metrics computation
   climatology = xr.open_zarr(CLIMATOLOGY_PATH.value)
+  # hack to avoid poles
+  climatology = climatology.sel(latitude=slice(-89, 89))
   climatology = evaluation.make_latitude_increasing(climatology)
 
   if QUANTILE_THRESHOLDS.value:

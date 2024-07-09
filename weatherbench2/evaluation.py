@@ -119,6 +119,10 @@ def open_source_files(
       chunks='auto' if (use_dask or pressure_level_suffixes) else None,
   )
 
+  # hack to avoid poles
+  obs = obs.sel(latitude=slice(-89,89))
+  forecast = forecast.sel(latitude=slice(-89,89))
+
   if pressure_level_suffixes:
     forecast = _decode_pressure_level_suffixes(forecast)
   if rename_variables is not None:
