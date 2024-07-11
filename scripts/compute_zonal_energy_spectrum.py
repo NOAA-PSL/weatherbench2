@@ -185,6 +185,8 @@ def main(argv: list[str]) -> None:
   ]
 
   source_dataset, source_chunks = xbeam.open_zarr(INPUT_PATH.value)
+  source_dataset = source_dataset[BASE_VARIABLES.value]
+  source_chunks = {k: v for k, v in source_chunks.items() if k in source_dataset}
   source_dataset = _impose_data_selection(source_dataset)
   source_chunks = {
       k: min(source_dataset.dims[k], source_chunks[k]) for k in source_chunks
