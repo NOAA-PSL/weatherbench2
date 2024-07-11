@@ -466,12 +466,16 @@ def _evaluate_all_metrics(
 
   if data_config.by_init:
     # get intersection of valid dates, then subselect truth and forecast (latter via initial conditions)
-    valid_time = list(set(truth.time.values).intersection(set(forecast.valid_time.values.flatten())))
+    valid_time = list(set(truth["time"].values).intersection(set(forecast["valid_time"].values.flatten())))
     t0 = xr.where(
-        [t in valid_time for t in forecast.valid_time.isel(lead_time=0, drop=True)],
-        forecast.init_time,
+        [t0 in valid_time and tf in valid_time for t0, tf in zip(
+            forecast["init_time"].values,
+            forecast["valid_time"].isel(lead_time=-1, drop=True).values,
+        )],
+        forecast["init_time"],
         np.datetime64("NaT"),
     ).dropna("init_time")
+
     forecast = forecast.sel(init_time=t0)
     # note that it's very important to use forecast.valid_time and not valid_time computed above,
     # because using the xarray dataset also converts
