@@ -214,6 +214,11 @@ TIME_STOP = flags.DEFINE_string(
     '2020-12-31',
     help='ISO 8601 timestamp (inclusive) at which to stop evaluation',
 )
+TIME_STRIDE = flags.DEFINE_integer(
+    'time_stride',
+    None,
+    help='Integer stride to subsample over time dimension',
+)
 OUTPUT_DIR = flags.DEFINE_string(
     'output_dir',
     None,
@@ -298,6 +303,7 @@ def main(argv: list[str]) -> None:
       aux_variables=AUX_VARIABLES.value,
       levels=[int(level) for level in LEVELS.value],
       time_slice=slice(TIME_START.value, TIME_STOP.value),
+      time_stride=TIME_STRIDE.value,
   )
 
   paths = config.Paths(

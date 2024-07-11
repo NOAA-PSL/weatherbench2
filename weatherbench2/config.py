@@ -37,10 +37,12 @@ class Selection:
     lon_slice: Longitude range in degrees.
     aux_variables: Sequence of auxiliary forecast variables required for certain
       evaluation metrics.
+    time_stride: Integer determining how to subsample along time dimension
   """
 
   variables: t.Sequence[str]
   time_slice: slice
+  time_stride: t.Optional[int] = None
   levels: t.Optional[t.Sequence[int]] = None
   lat_slice: t.Optional[slice] = dataclasses.field(
       default_factory=lambda: slice(None, None)

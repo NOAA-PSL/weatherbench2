@@ -159,6 +159,8 @@ def _impose_data_selection(
     dataset = dataset.sel(level=selection.levels)
   if select_time:
     dataset = dataset.sel({time_dim: selection.time_slice})
+    if selection.time_stride is not None:
+      dataset = dataset.isel({time_dim: slice(None, None, selection.time_stride)})
   _ensure_nonempty(dataset, message='Selection created empty dataset')  # pytype: disable=wrong-arg-types
   return dataset  # pytype: disable=bad-return-type
 

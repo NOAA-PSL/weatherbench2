@@ -75,6 +75,11 @@ TIME_STOP = flags.DEFINE_string(
     '2020-12-31',
     help='ISO 8601 timestamp (inclusive) at which to stop evaluation',
 )
+TIME_STRIDE = flags.DEFINE_integer(
+    'time_stride',
+    None,
+    help='Integer stride to subsample over time dimension',
+)
 LEVELS = flags.DEFINE_list(
     'levels',
     _DEFAULT_LEVELS,
@@ -166,7 +171,10 @@ def _impose_data_selection(ds: xr.Dataset) -> xr.Dataset:
       TIME_DIM.value: slice(TIME_START.value, TIME_STOP.value),
       'level': [int(level) for level in LEVELS.value],
   }
-  return ds.sel({k: v for k, v in selection.items() if k in ds.dims})
+  xds = ds.sel({k: v for k, v in selection.items() if k in ds.dims})
+  if TIME_STRIDE.value is not None:
+    xds = xds.isel({TIME_DIM.value: slice(None, None, TIME_STRIDE.value)})
+  return xds
 
 
 def _strip_offsets(
