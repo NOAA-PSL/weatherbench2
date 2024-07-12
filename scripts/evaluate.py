@@ -301,7 +301,7 @@ def main(argv: list[str]) -> None:
   selection = config.Selection(
       variables=VARIABLES.value,
       aux_variables=AUX_VARIABLES.value,
-      levels=[int(level) for level in LEVELS.value],
+      levels=[float(level) for level in LEVELS.value],
       time_slice=slice(TIME_START.value, TIME_STOP.value),
       time_stride=TIME_STRIDE.value,
   )
@@ -391,10 +391,13 @@ def main(argv: list[str]) -> None:
     }
 
   # Open climatology for ACC and quantile metrics computation
-  climatology = xr.open_zarr(CLIMATOLOGY_PATH.value)
-  # hack to avoid poles
-  climatology = climatology.sel(latitude=slice(-89, 89))
-  climatology = evaluation.make_latitude_increasing(climatology)
+  if CLIMATOLOGY_PATH.value is not None:
+    climatology = xr.open_zarr(CLIMATOLOGY_PATH.value)
+    # hack to avoid poles
+    climatology = climatology.sel(latitude=slice(-89, 89))
+    climatology = evaluation.make_latitude_increasing(climatology)
+  else:
+    climatology = None
 
   if QUANTILE_THRESHOLDS.value:
     threshold_cls = thresholds.get_threshold_cls(THRESHOLD_METHOD.value)
@@ -407,10 +410,12 @@ def main(argv: list[str]) -> None:
 
   deterministic_metrics = {
       'mse': metrics.MSE(wind_vector_mse=_wind_vector_error('mse')),
-      'acc': metrics.ACC(climatology=climatology),
+
       'bias': metrics.Bias(),
       'mae': metrics.MAE(),
   }
+  if climatology is not None:
+    deterministic_metrics['acc'] = metrics.ACC(climatology=climatology)
   rmse_metrics = {
       'rmse_sqrt_before_time_avg': metrics.RMSESqrtBeforeTimeAvg(
           wind_vector_rmse=_wind_vector_error('rmse')

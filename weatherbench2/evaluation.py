@@ -119,19 +119,20 @@ def open_source_files(
       chunks='auto' if (use_dask or pressure_level_suffixes) else None,
   )
 
-  # hack to avoid poles
-  obs = obs.sel(latitude=slice(-89,89))
-  forecast = forecast.sel(latitude=slice(-89,89))
-
   if pressure_level_suffixes:
     forecast = _decode_pressure_level_suffixes(forecast)
   if rename_variables is not None:
     forecast = forecast.rename(rename_variables)
+    if "lat" in obs.coords and "latitude" not in obs.coords:
+      obs = obs.rename(rename_variables)
 
   obs = make_latitude_increasing(obs)
   forecast = make_latitude_increasing(forecast)
   forecast = _ensure_aligned_grid(forecast, obs)
   forecast = schema.apply_time_conventions(forecast, by_init=by_init)
+
+  forecast = forecast.sel(latitude=slice(-89,89))
+  obs = obs.sel(latitude=slice(-89,89))
 
   _ensure_nonempty(obs)
   _ensure_nonempty(forecast)
@@ -466,7 +467,7 @@ def _evaluate_all_metrics(
   if eval_config.evaluate_persistence:
     forecast = create_persistence_forecast(forecast, truth)
 
-  if data_config.by_init:
+  if data_config.by_init and "lead_time" not in truth:
     # get intersection of valid dates, then subselect truth and forecast (latter via initial conditions)
     valid_time = list(set(truth["time"].values).intersection(set(forecast["valid_time"].values.flatten())))
     t0 = xr.where(
@@ -483,6 +484,8 @@ def _evaluate_all_metrics(
     # because using the xarray dataset also converts
     # the truth dataset coordinates from time -> (init_time, lead_time) as with forecast dataset
     truth = truth.sel(time=forecast.valid_time)
+  elif data_config.by_init and "lead_time" in truth:
+    truth = truth.rename({"time": "init_time"})
 
   results = _metric_and_region_loop(forecast, truth, eval_config)
 
