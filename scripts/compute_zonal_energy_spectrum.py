@@ -34,6 +34,7 @@ Example Usage:
     --job_name=compute-zonal-energy-spectrum-$USER
   ```
 """
+import ast
 import typing as t
 
 from absl import app
@@ -60,6 +61,14 @@ BASE_VARIABLES = flags.DEFINE_list(
     help=(
         'Comma delimited list of variables in --input_path. Each variable VAR '
         'results in a VAR_zonal_power_spectrum entry in --output_path.'
+    ),
+)
+RENAME_VARIABLES = flags.DEFINE_string(
+    'rename_variables',
+    None,
+    help=(
+        'Dictionary of variable to rename to standard names. E.g. {"2t":'
+        ' "2m_temperature"}'
     ),
 )
 TIME_DIM = flags.DEFINE_string(
@@ -169,7 +178,7 @@ def _output_dims(source: xr.Dataset, include_averaging_dims: bool) -> list[str]:
 def _impose_data_selection(ds: xr.Dataset) -> xr.Dataset:
   selection = {
       TIME_DIM.value: slice(TIME_START.value, TIME_STOP.value),
-      'level': [int(level) for level in LEVELS.value],
+      'level': [float(level) for level in LEVELS.value],
   }
   xds = ds.sel({k: v for k, v in selection.items() if k in ds.dims})
   if TIME_STRIDE.value is not None:
@@ -192,7 +201,16 @@ def main(argv: list[str]) -> None:
       ZonalEnergySpectrum(varname) for varname in BASE_VARIABLES.value
   ]
 
+  rename_variables = (
+      ast.literal_eval(RENAME_VARIABLES.value)
+      if RENAME_VARIABLES.value
+      else None
+  )
+
   source_dataset, source_chunks = xbeam.open_zarr(INPUT_PATH.value)
+  if rename_variables is not None:
+    source_dataset = source_dataset.rename(rename_variables)
+    source_chunks = {rename_variables[k] if k in rename_variables else k: v for k, v in source_chunks.items()}
   source_dataset = source_dataset[BASE_VARIABLES.value]
   source_chunks = {k: v for k, v in source_chunks.items() if k in source_dataset}
   source_dataset = _impose_data_selection(source_dataset)
