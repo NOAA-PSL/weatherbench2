@@ -118,6 +118,9 @@ def open_source_files(
       # Use dask to decode pressure levels since xr's expand_dims is not lazy
       chunks='auto' if (use_dask or pressure_level_suffixes) else None,
   )
+  if not by_init:
+    if np.any(forecast.time.values != forecast.sortby("time").time.values):
+      forecast = forecast.sortby("time")
 
   if pressure_level_suffixes:
     forecast = _decode_pressure_level_suffixes(forecast)
@@ -128,11 +131,12 @@ def open_source_files(
 
   obs = make_latitude_increasing(obs)
   forecast = make_latitude_increasing(forecast)
-  forecast = _ensure_aligned_grid(forecast, obs)
-  forecast = schema.apply_time_conventions(forecast, by_init=by_init)
 
   forecast = forecast.sel(latitude=slice(-89,89))
   obs = obs.sel(latitude=slice(-89,89))
+
+  forecast = _ensure_aligned_grid(forecast, obs)
+  forecast = schema.apply_time_conventions(forecast, by_init=by_init)
 
   _ensure_nonempty(obs)
   _ensure_nonempty(forecast)
@@ -419,14 +423,14 @@ def _metric_and_region_loop(
         region_dim = xr.DataArray(
             [region_name], coords={'region': [region_name]}
         )
-        tmp_result = eval_fn(forecast=forecast, truth=truth, region=region)
+        tmp_result = eval_fn(forecast=forecast, truth=truth, region=region, skipna=eval_config.skipna)
         tmp_results.append(
             tmp_result.expand_dims({'metric': metric_dim, 'region': region_dim})
         )
         logging.info(f'Logging region done: {region_name}')
       result = xr.concat(tmp_results, 'region')
     else:
-      result = eval_fn(forecast=forecast, truth=truth).expand_dims(
+      result = eval_fn(forecast=forecast, truth=truth, skipna=eval_config.skipna).expand_dims(
           {'metric': metric_dim}
       )
     results.append(result)

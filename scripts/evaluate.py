@@ -259,6 +259,11 @@ NUM_THREADS = flags.DEFINE_integer(
     None,
     help='Number of chunks to read/write Zarr in parallel per worker.',
 )
+SKIPNA = flags.DEFINE_bool(
+    'skipna',
+    False,
+    help='If True, skip NaNs during metric computation',
+)
 
 
 def _wind_vector_error(err_type: str):
@@ -460,6 +465,7 @@ def main(argv: list[str]) -> None:
           derived_variables=derived_variables,
           evaluate_persistence=EVALUATE_PERSISTENCE.value,
           evaluate_climatology=EVALUATE_CLIMATOLOGY.value,
+          skipna=SKIPNA.value,
       ),
       'deterministic_spatial': config.Eval(
           metrics=spatial_metrics,
@@ -468,6 +474,7 @@ def main(argv: list[str]) -> None:
           evaluate_persistence=EVALUATE_PERSISTENCE.value,
           evaluate_climatology=EVALUATE_CLIMATOLOGY.value,
           output_format='zarr',
+          skipna=SKIPNA.value,
       ),
       'deterministic_temporal': config.Eval(
           metrics=deterministic_metrics | rmse_metrics,
@@ -477,6 +484,7 @@ def main(argv: list[str]) -> None:
           evaluate_persistence=EVALUATE_PERSISTENCE.value,
           evaluate_climatology=EVALUATE_CLIMATOLOGY.value,
           temporal_mean=False,
+          skipna=SKIPNA.value,
       ),
       # Against analysis is deprecated for by_init, since the time intervals are
       # not compatible. Still functional for by_valid
@@ -633,6 +641,9 @@ def main(argv: list[str]) -> None:
       for k, v in eval_configs.items()
       if k in EVAL_CONFIGS.value.split(',')
   }
+  if SKIPNA.value:
+    if any([k not in ("deterministic", "deterministic_spatial", "deterministic_temporal") for k in eval_configs.keys()]):
+        raise NotImplementedError
 
   if USE_BEAM.value:
     evaluation.evaluate_with_beam(

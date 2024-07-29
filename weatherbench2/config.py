@@ -137,6 +137,7 @@ class Eval:
   # output_format='zarr' is also supported, but may be buggy due to
   # https://github.com/google/xarray-beam/issues/85
   output_format: str = 'netcdf'
+  skipna: t.Optional[bool] = False
 
 
 @dataclasses.dataclass
